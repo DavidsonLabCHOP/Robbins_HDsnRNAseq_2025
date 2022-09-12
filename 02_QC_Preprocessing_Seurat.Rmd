@@ -1,0 +1,159 @@
+---
+title: "02 - Seurat QC and Preprocessing"
+author: "Ashley B. Robbins"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: "show"
+    toc: true
+    toc_float: true
+    theme: 
+      bootswatch: yeti
+params:
+  dir: "/path/dir"
+  data_dir: "/path/file"
+  fig_dir: "/path/file"
+  region: ""
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE)
+knitr::opts_knit$set(root.dir = params$dir)
+```
+
+# Load necessary packages
+
+```{r load packages}
+suppressPackageStartupMessages({
+  library(Seurat)
+  library(readr)
+  library(tidyseurat)
+  library(dplyr)
+  library(tidyverse)
+  library(details)
+})
+```
+
+# Import rds objects into Seurat
+
+```{r data import}
+Plate1 <- readRDS("~/path/rds")
+Plate2 <- readRDS("~/path/rds")
+
+seurat_merged  <- merge(Plate1,y = Plate2, project = "")
+seurat_merged
+```
+
+# QC Analysis
+
+## Annotate mitochondrial genes
+```{r mito genes}
+mito.genes <- grep(pattern = "^mt-", x = rownames(x = seurat_merged@meta.data), value = TRUE)
+seurat_merged[["percent.mt"]] <- PercentageFeatureSet(seurat_merged, pattern = "^mt-")
+```
+## Plot QC metrics
+```{r qc metrics}
+pdf(paste0(params$fig_dir, "/qc_violin_plot.pdf"), width=10, height=20)
+VlnPlot(seurat_merged, group.by="Sublibrary", features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 1, pt.size=0)
+dev.off()
+```
+## Filter by genes detected and percent.mt
+```{r filter}
+filter <- !(seurat_merged$nCount_RNA > 20000 | seurat_merged$percent.mt > 1 | seurat_merged$nFeature_RNA > 300)
+
+seurat_merged <- seurat_merged[,filter]
+
+# How many cells are retained per sublibrary?
+table(seurat_merged$orig.ident)
+```
+## Plot QC metrics Post-Filtering
+```{r qc metrics post-filter}
+pdf(paste0(params$fig_dir, "/qc_violin_plot_postfilter.pdf"), width=10, height=20)
+VlnPlot(seurat_merged, group.by="Sublibrary", features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 1, pt.size=0)
+dev.off()
+```
+## Preprocessing
+```{r preprocessing Seurat}
+# normalization
+seurat_merged <- NormalizeData(seurat_merged)
+seurat_merged <- ScaleData(seurat_merged, features=rownames(seurat_merged))
+seurat_merged <- FindVariableFeatures(seurat_merged, nfeatures=3500)
+
+# remove any mito genes from variable feature set:
+VariableFeatures(seurat_merged) <- VariableFeatures(seurat_merged)[!grepl("^mt-", VariableFeatures(seurat_merged))]
+
+# dim reduction
+seurat_merged <- RunPCA(seurat_merged, features=VariableFeatures(seurat_merged))
+seurat_merged <- RunUMAP(seurat_merged, dims = 1:30)
+
+# clustering
+seurat_merged <- FindNeighbors(seurat_merged)
+seurat_merged <- FindClusters(seurat_merged, resolution = 0.75)
+
+# save filtered seurat object
+saveRDS(seurat_merged, file = paste("seurat_filtered_",params$region,".rds", sep = ""))
+```
+## Visualization 
+### Experimental Factors
+```{r visualization metadata}
+# UMAP + Clusters
+p <- DimPlot(seurat_merged, label=TRUE)
+pdf(paste0(params$fig_dir, 'umap_clusters.pdf'), width=8, height=7)
+p
+dev.off()
+
+# color by Sublibrary
+p <- DimPlot(seurat_merged, group.by='Sublibrary') 
+pdf(paste0(params$fig_dir, 'umap_Sublibrary.pdf'), width=8, height=7)
+p
+dev.off()
+
+# color by ID
+p <- DimPlot(seurat_merged, group.by='ID') 
+pdf(paste0(params$fig_dir, 'umap_ID.pdf'), width=8, height=7)
+p
+dev.off()
+
+# split by Genotype:
+p <- DimPlot(seurat_merged, group.by='Genotype')
+pdf(paste0(params$fig_dir, 'umap_Genotype.pdf'), width=8, height=7)
+p
+dev.off()
+
+# split by Age:
+p <- DimPlot(seurat_merged, group.by='Age')
+pdf(paste0(params$fig_dir, 'umap_Age.pdf'), width=8, height=7)
+p
+dev.off()
+
+# split by Sublibrary:
+p <- DimPlot(seurat_merged, split.by='Sublibrary', ncol=4) 
+pdf(paste0(params$fig_dir, 'umap_sublibrary_split.pdf'), width=12, height=6)
+p
+dev.off()
+```
+### QC metrics
+```{r visualization qc metrics}
+p <- FeaturePlot(seurat_merged,features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, max.cutoff='q99', order=TRUE)
+
+pdf(paste0(params$fig_dir, 'featureplot_qc.pdf'), width=14, height=4, useDingbats=FALSE)
+p
+dev.off()
+
+```
+### Marker genes
+```{r visualization marker genes}
+markers <- c()
+pdf(paste0(params$fig_dir, 'featureplot_markers.pdf'), width=5, height=5, useDingbats=FALSE)
+
+for(gene in markers){
+  print(gene)
+  p1 <- FeaturePlot(seurat_merged, features=gene, max.cutoff='q99', order=TRUE) +
+    scale_color_gradientn(colors=viridis(250), guide = guide_colorbar(barwidth=1, barheight=5, ticks=FALSE)) 
+
+  print(p1)
+}
+dev.off()
+```
+
