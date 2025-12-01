@@ -2,6 +2,15 @@
 
 ## Abstract
 
+Huntington’s disease (HD) involves progressive corticostriatal dysfunction; however, the timing of region-specific transcriptional changes remains unresolved at cellular resolution. Here, we provide a temporal single-nuclei transcriptomic atlas of the striatum and motor cortex in the zQ175 knock-in mouse model at early (6 months) and late (18 months) stages. Striatal projection neurons show extensive early dysregulation with progressive striosomal identity loss, whereas cortical pyramidal neurons exhibit layer-specific changes coinciding with motor symptom onset. By modeling genotype-dependent effects, we distinguished region- and cell type-specific gene signatures of core disease mechanisms from those of aging and compensatory adaptations. Integrating these findings with gene co-expression and transcription factor regulatory networks, we identified candidate regulators of compensatory disease signatures also noted in recently identified CAG repeat length-dependent genes from studies on HD patient brain tissues. Further, this resource reports cell type-specific gene expression programs with conserved dynamics in human HD brain and other mice datasets along with coordinated cross-regional transcriptional responses, establishing a comprehensive temporal framework to guide further work.
+
+## Links to additional related repositories and protocols
+
+[SPLiT-seq demultiplexing repository](https://github.com/DavidsonLabCHOP/SPLiT-seq)
+
+[SPLiT-seq library preparation protocol (optimized for this study)](https://www.protocols.io/view/protocol-for-split-seq-4r3l27o8jg1y/v1)
+
+
 ## About repository
 
 This repository includes all data processing and analysis code from Robbins et al. 2025 [link]. This README is structured to align with the manuscript organization and provides links to the relevant scripts. All necessary code is included to reproduce rsults from either raw sequencing reads or processed data objects. 
